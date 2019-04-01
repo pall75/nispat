@@ -185,14 +185,17 @@ def normative_xlsx(xlsx_path,
     estimate(respfile, covfile, cvfolds=cvfolds, outputsuffix=cvoutputsuffix)
     zcvfile = 'Z' + cvoutputsuffix + '.txt'
     Zcv = fileio.load(zcvfile)    
-    df[ z_column_name ][normative_cases ]= Zcv
+    #df_new[ z_column_name ][normative_cases ]= Zcv
+    df.loc[normative_cases,z_column_name] = Zcv
 
     # GP regression of normative data followed by prediction on test data
     testoutputsuffix = '_test'
     estimate(respfile, covfile, testresp=testresp, testcov=testcov, outputsuffix=testoutputsuffix)
     ztestfile = 'Z' + testoutputsuffix + '.txt'
     Ztest = fileio.load(ztestfile)
-    df[ z_column_name ][test_cases ]= Ztest
+    #df_new[ z_column_name ][test_cases ]= Ztest
+    df.loc[test_cases,z_column_name] = Ztest
+
 
     # Save Z-scores to new xlsx file
     df.to_excel(nm_name + '_Z.xlsx')
