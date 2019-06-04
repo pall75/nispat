@@ -124,8 +124,9 @@ def normative_xlsx(xlsx_path,
     covstr =''
     for i in range(0,len(X_columns_names)):
       covstr= covstr + '_' + X_columns_names[i]
-    wdir = os.path.realpath(os.path.curdir)    
-    nm_name = os.path.splitext(ntpath.basename(xlsx_path))[0] + '_' + Y_column_name + covstr + sexstr
+    wdir = os.path.realpath(os.path.curdir)
+    xlsx_name=os.path.splitext(ntpath.basename(xlsx_path))[0];    
+    nm_name = xlsx_name + '_' + Y_column_name + covstr + sexstr
     nm_dir  = os.path.join(wdir, nm_name)
     if not os.path.exists(nm_dir):
         os.makedirs(nm_dir)    
@@ -181,8 +182,9 @@ def normative_xlsx(xlsx_path,
     np.savetxt(testresp,Y_p)
 
     # Add new column for Z scores
+    z_df = df[['subjects', 'age', 'group', 'sex']].copy()
     z_column_name = Y_column_name + '_Z'
-    df[ z_column_name ]= ''
+    z_df[ z_column_name ]= ''
 
     # GP regression and crossvalidation on normative data
     cvfolds = 10
@@ -191,7 +193,7 @@ def normative_xlsx(xlsx_path,
     zcvfile = 'Z' + cvoutputsuffix + '.txt'
     Zcv = fileio.load(zcvfile)    
     #df_new[ z_column_name ][normative_cases ]= Zcv
-    df.loc[normative_cases,z_column_name] = Zcv
+    z_df.loc[normative_cases,z_column_name] = Zcv
 
     # GP regression of normative data followed by prediction on test data
     testoutputsuffix = '_test'
@@ -199,9 +201,9 @@ def normative_xlsx(xlsx_path,
     ztestfile = 'Z' + testoutputsuffix + '.txt'
     Ztest = fileio.load(ztestfile)
     #df_new[ z_column_name ][test_cases ]= Ztest
-    df.loc[test_cases,z_column_name] = Ztest
+    z_df.loc[test_cases,z_column_name] = Ztest
 
 
     # Save Z-scores to new xlsx file
-    df.to_excel(nm_name + '_Z.xlsx')
+    z_df.to_excel(xlsx_name + '_Z.xlsx')
 
