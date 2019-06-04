@@ -37,6 +37,7 @@ def normative_xlsx(xlsx_path,
                    Y_column,
                    groups_column='group',
                    normative_group='TD',
+                   asd_group='ASD',
                    sheet_name='Sheet1',
                    sex='Males_and_Females'):
     
@@ -94,6 +95,7 @@ def normative_xlsx(xlsx_path,
     column_names = list(df.columns.values)
     groups = df[groups_column].values    
     normatives = groups == normative_group
+    asds = groups == asd_group
     non_normatives = groups != normative_group
 
     # Select cases for chonsen sex
@@ -143,9 +145,12 @@ def normative_xlsx(xlsx_path,
     y_isnan=np.isnan(Y) 
     y_outliers=get_outliers(Y,'median',3)
     
+    ok_indexes= ~x_isnan & ~x_outliers & ~y_isnan & ~y_outliers & chosen_sex    
+    
     # Set normative cases (normatives) and test cases
-    normative_cases = normatives & ~x_outliers & ~x_isnan & ~y_outliers & ~y_isnan & chosen_sex
-    test_cases = non_normatives & ~x_isnan & ~y_isnan & chosen_sex
+    normative_cases = normatives & ok_indexes
+    #test_cases = non_normatives & ok_indexes
+    test_cases = asds & ok_indexes
     
     # Covariates X for normative cases
     X_c = X[ normative_cases ]
