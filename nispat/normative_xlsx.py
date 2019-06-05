@@ -34,7 +34,7 @@ def get_outliers(data, method='median', m=3):
 
 def normative_xlsx(xlsx_path,
                    X_columns,
-                   Y_column,
+                   Y_columns,
                    groups_column='group',
                    normative_group='TD',
                    asd_group='ASD',
@@ -98,15 +98,15 @@ def normative_xlsx(xlsx_path,
     asds = groups == asd_group
     non_normatives = groups != normative_group
 
-    # Select cases for chonsen sex
+    # Select cases for chosen sex
     if 'sex' in column_names:
-        males = (df['sex']=='Male').values
-        females = (df['sex']=='Female').values
+        males = (df['sex']==1).values #Males
+        females = (df['sex']==-1).values #Females
         males_and_females=males|females
-        if sex=='Males':
+        if sex==1: #Males
             chosen_sex=males
             sexstr = '_Males'
-        elif sex=='Females':
+        elif sex==-1: #Females
             chosen_sex=females
             sexstr = '_Females'
         else:
@@ -116,92 +116,96 @@ def normative_xlsx(xlsx_path,
         chosen_sex=np.full(groups.shape, True, dtype=bool)
         sexstr = ''
     
-    # Specify the columns corresponding to the response variable Y and covariates X
-    Y_column_name   = list(df.columns.values)[Y_column]
+    # Get the column names corresponding to the covariates X
     X_columns_names = [ column_names[i] for i in X_columns]
-   
-    # Create the dirname for the normative model based on the xlsx and X,Y column names
-    covstr =''
-    for i in range(0,len(X_columns_names)):
-      covstr= covstr + '_' + X_columns_names[i]
     wdir = os.path.realpath(os.path.curdir)
-    xlsx_name=os.path.splitext(ntpath.basename(xlsx_path))[0];    
-    nm_name = xlsx_name + '_' + Y_column_name + covstr + sexstr
-    nm_dir  = os.path.join(wdir, nm_name)
-    if not os.path.exists(nm_dir):
-        os.makedirs(nm_dir)    
-    os.chdir(nm_dir)
-
-    # Get the values for the covariates X 
-    X = df.iloc[:,X_columns].values
-    X_isnan=np.isnan(X)    
-    x_isnan = X_isnan.any(axis=1)
-    X_outliers = np.full(X.shape, False, dtype=bool)
-    for j in range(0,X.shape[1]):
-        X_outliers[:, j]=get_outliers(X[:,j],'median',3)
-    x_outliers = X_outliers.any(axis=1)
-
-    # Get the values for the response variable Y
-    Y = df.iloc[:,Y_column].values
-    y_isnan=np.isnan(Y) 
-    y_outliers=get_outliers(Y,'median',3)
+    z_df = df[['subject_id', 'age', 'group', 'sex']].copy()
     
-    ok_indexes= ~x_isnan & ~x_outliers & ~y_isnan & ~y_outliers & chosen_sex    
+    # Compute normative modelling for each response variable Y using all covariates X
+    for Y_column in Y_columns:
+        Y_column_name = column_names[Y_column]        
+        # Create the dirname for the normative model based on the xlsx and X,Y column names
+        covstr =''
+        for i in range(0,len(X_columns_names)):
+          covstr= covstr + '_' + X_columns_names[i]
+        xlsx_name=os.path.splitext(ntpath.basename(xlsx_path))[0];    
+        #nm_name = xlsx_name + '_' + Y_column_name + covstr + sexstr
+        nm_name = xlsx_name + covstr + sexstr
+        nm_dir  = os.path.join(wdir, nm_name)
+        if not os.path.exists(nm_dir):
+            os.makedirs(nm_dir)    
+        os.chdir(nm_dir)
     
-    # Set normative cases (normatives) and test cases
-    normative_cases = normatives & ok_indexes
-    #test_cases = non_normatives & ok_indexes
-    test_cases = asds & ok_indexes
+        # Get the values for the covariates X 
+        X = df.iloc[:,X_columns].values
+        #X_isnan=np.isnan(X)    
+        #x_isnan = X_isnan.any(axis=1)
+        #X_outliers = np.full(X.shape, False, dtype=bool)
+        #for j in range(0,X.shape[1]):
+        #    X_outliers[:, j]=get_outliers(X[:,j],'median',5)
+        #x_outliers = X_outliers.any(axis=1)
     
-    # Covariates X for normative cases
-    X_c = X[ normative_cases ]
-    X_c = X_c.reshape(len(X_c),1)
-    covfile= 'covariates.txt'    
-    covfile = os.path.join(nm_dir, covfile)
-    np.savetxt(covfile,X_c)
-
-    # Covariates X for test cases
-    X_p = X[ test_cases ]
-    X_p = X_p.reshape(len(X_p),1)
-    testcov = 'testcovariates.txt'
-    testcov = os.path.join(nm_dir, testcov)
-    np.savetxt(testcov,X_p)
-
-    # Response Y for normative and test cases
-    Y_c = Y[ normative_cases ]
-    Y_c = Y_c.reshape(len(Y_c),1)
-    respfile = 'responses.txt'
-    respfile = os.path.join(nm_dir, respfile)
-    np.savetxt(respfile,Y_c)    
+        # Get the values for the response variable Y
+        Y = df.iloc[:,Y_column].values
+        y_isnan=np.isnan(Y) 
+        y_outliers=get_outliers(Y,'median',5)
+        
+        #ok_indexes= ~x_isnan & ~x_outliers & ~y_isnan & ~y_outliers & chosen_sex    
+        ok_indexes= ~y_isnan & ~y_outliers & chosen_sex    
+        
+        # Set normative cases (normatives) and test cases
+        normative_cases = normatives & ok_indexes
+        #test_cases = non_normatives & ok_indexes
+        test_cases = asds & ok_indexes
+        
+        # Covariates X for normative cases
+        X_c = X[ normative_cases ]
+    #    X_c = X_c.reshape(len(X_c),1)
+        covfile= 'covariates.txt'    
+        covfile = os.path.join(nm_dir, covfile)
+        np.savetxt(covfile,X_c)
     
-    # Response Y for test cases
-    Y_p = Y[ test_cases ]
-    Y_p = Y_p.reshape(len(Y_p),1)
-    testresp = 'testresponses.txt'
-    testresp = os.path.join(nm_dir, testresp)
-    np.savetxt(testresp,Y_p)
-
-    # Add new column for Z scores
-    z_df = df[['subjects', 'age', 'group', 'sex']].copy()
-    z_column_name = Y_column_name + '_Z'
-    z_df[ z_column_name ]= ''
-
-    # GP regression and crossvalidation on normative data
-    cvfolds = 10
-    cvoutputsuffix = '_cv' + str(cvfolds)
-    estimate(respfile, covfile, cvfolds=cvfolds, outputsuffix=cvoutputsuffix)
-    zcvfile = 'Z' + cvoutputsuffix + '.txt'
-    Zcv = fileio.load(zcvfile)    
-    #df_new[ z_column_name ][normative_cases ]= Zcv
-    z_df.loc[normative_cases,z_column_name] = Zcv
-
-    # GP regression of normative data followed by prediction on test data
-    testoutputsuffix = '_test'
-    estimate(respfile, covfile, testresp=testresp, testcov=testcov, outputsuffix=testoutputsuffix)
-    ztestfile = 'Z' + testoutputsuffix + '.txt'
-    Ztest = fileio.load(ztestfile)
-    #df_new[ z_column_name ][test_cases ]= Ztest
-    z_df.loc[test_cases,z_column_name] = Ztest
+        # Covariates X for test cases
+        X_p = X[ test_cases ]
+    #    X_p = X_p.reshape(len(X_p),1)
+        testcov = 'testcovariates.txt'
+        testcov = os.path.join(nm_dir, testcov)
+        np.savetxt(testcov,X_p)
+    
+        # Response Y for normative and test cases
+        Y_c = Y[ normative_cases ]
+        Y_c = Y_c.reshape(len(Y_c),1)
+        respfile = 'responses.txt'
+        respfile = os.path.join(nm_dir, respfile)
+        np.savetxt(respfile,Y_c)    
+        
+        # Response Y for test cases
+        Y_p = Y[ test_cases ]
+        Y_p = Y_p.reshape(len(Y_p),1)
+        testresp = 'testresponses.txt'
+        testresp = os.path.join(nm_dir, testresp)
+        np.savetxt(testresp,Y_p)
+    
+        # Add new column for Z scores
+        z_column_name = Y_column_name + '_Z'
+        z_df[ z_column_name ]= ''
+    
+        # GP regression and crossvalidation on normative data
+        cvfolds = 10
+        cvoutputsuffix = '_cv' + str(cvfolds)
+        estimate(respfile, covfile, cvfolds=cvfolds, outputsuffix=cvoutputsuffix)
+        zcvfile = 'Z' + cvoutputsuffix + '.txt'
+        Zcv = fileio.load(zcvfile)    
+        #df_new[ z_column_name ][normative_cases ]= Zcv
+        z_df.loc[normative_cases,z_column_name] = Zcv
+    
+        # GP regression of normative data followed by prediction on test data
+        testoutputsuffix = '_test'
+        estimate(respfile, covfile, testresp=testresp, testcov=testcov, outputsuffix=testoutputsuffix)
+        ztestfile = 'Z' + testoutputsuffix + '.txt'
+        Ztest = fileio.load(ztestfile)
+        #df_new[ z_column_name ][test_cases ]= Ztest
+        z_df.loc[test_cases,z_column_name] = Ztest
 
 
     # Save Z-scores to new xlsx file
