@@ -151,12 +151,13 @@ def normative_xlsx(xlsx_path,
         y_outliers=get_outliers(Y,'median',5)
         
         #ok_indexes= ~x_isnan & ~x_outliers & ~y_isnan & ~y_outliers & chosen_sex    
-        ok_indexes= ~y_isnan & ~y_outliers & chosen_sex    
+        #ok_indexes= ~y_isnan & ~y_outliers & chosen_sex    
+        #ok_indexes= ~y_isnan & chosen_sex    
         
         # Set normative cases (normatives) and test cases
-        normative_cases = normatives & ok_indexes
+        normative_cases = normatives & ~y_isnan & ~y_outliers & chosen_sex 
         #test_cases = non_normatives & ok_indexes
-        test_cases = asds & ok_indexes
+        test_cases = asds & ~y_isnan & chosen_sex
         
         # Covariates X for normative cases
         X_c = X[ normative_cases ]
